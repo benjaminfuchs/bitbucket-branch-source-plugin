@@ -437,6 +437,9 @@ public class BitbucketServerAPIClient implements BitbucketApi {
                 page = JsonParser.toJava(response, BitbucketServerBranches.class);
                 branches.addAll(page.getValues());
             }
+            if (System.getProperty("jenkins.bitbucket.unlimitedBranches") != "true") {
+                branches = branches.subList(0, Math.min(100, branches.size()));
+            }
             for (final BitbucketServerBranch branch: branches) {
                 branch.setTimestampClosure(new Callable<Long>() {
                     @Override
