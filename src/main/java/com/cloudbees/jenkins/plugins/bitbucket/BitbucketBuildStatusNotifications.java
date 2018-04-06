@@ -38,6 +38,9 @@ import hudson.scm.SCM;
 import hudson.scm.SCMRevisionState;
 import java.io.File;
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import javax.annotation.CheckForNull;
 import jenkins.model.JenkinsLocationConfiguration;
 import jenkins.plugins.git.AbstractGitSCMSource;
@@ -45,6 +48,7 @@ import jenkins.scm.api.SCMHeadObserver;
 import jenkins.scm.api.SCMRevision;
 import jenkins.scm.api.SCMRevisionAction;
 import jenkins.scm.api.SCMSource;
+
 import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
 
 /**
@@ -54,6 +58,16 @@ import org.jenkinsci.plugins.displayurlapi.DisplayURLProvider;
  */
 public class BitbucketBuildStatusNotifications {
 
+    private static final int MAX_ENTRIES = 1000;
+
+    private static LinkedHashMap<String, SCMSource> sourceCache = new LinkedHashMap<String, SCMSource>() {
+        private static final long serialVersionUID = 1L;
+
+        protected boolean removeEldestEntry(Map.Entry<String, SCMSource> eldest) {
+            return size() > MAX_ENTRIES;
+        }
+    };
+    
     private static void createStatus(@NonNull Run<?, ?> build, @NonNull TaskListener listener,
                                      @NonNull BitbucketApi bitbucket, @NonNull String hash)
             throws IOException, InterruptedException {
@@ -98,11 +112,20 @@ public class BitbucketBuildStatusNotifications {
 
     private static void sendNotifications(Run<?, ?> build, TaskListener listener)
             throws IOException, InterruptedException {
-        final SCMSource s = SCMSource.SourceByItem.findSource(build.getParent());
+        SCMSource s = SCMSource.SourceByItem.findSource(build.getParent());
+        String buildName = build.getFullDisplayName();
+
         if (!(s instanceof BitbucketSCMSource)) {
-            return;
+            if (sourceCache.containsKey(buildName)) {
+                s = sourceCache.get(buildName);
+            } else {
+                return;
+            }
+        } else {
+            sourceCache.put(buildName, s);
         }
         BitbucketSCMSource source = (BitbucketSCMSource) s;
+
         if (new BitbucketSCMSourceContext(null, SCMHeadObserver.none())
                 .withTraits(source.getTraits())
                 .notificationsDisabled()) {
