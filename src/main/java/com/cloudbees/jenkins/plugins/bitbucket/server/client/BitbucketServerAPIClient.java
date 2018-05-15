@@ -453,7 +453,7 @@ public class BitbucketServerAPIClient implements BitbucketApi {
                 branches.addAll(page.getValues());
             }
             if (System.getProperty("jenkins.bitbucket.unlimitedBranches") != "true") {
-                List<BitbucketServerBranch> releaseBranches = new ArrayList<BitbucketServerBranch>();
+                List<BitbucketServerBranch> releaseBranches = Collections.synchronizedList(new ArrayList<BitbucketServerBranch>());
                 for (BitbucketServerBranch branch: branches) {
                     if (branch.getName().startsWith("release")) {
                         releaseBranches.add(branch);
