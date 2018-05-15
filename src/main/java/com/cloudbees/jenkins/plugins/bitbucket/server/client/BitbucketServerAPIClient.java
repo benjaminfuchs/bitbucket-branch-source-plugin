@@ -66,6 +66,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -435,7 +436,7 @@ public class BitbucketServerAPIClient implements BitbucketApi {
         String url = template.expand();
 
         try {
-            List<BitbucketServerBranch> branches = Collections.synchronizedList(new ArrayList<BitbucketServerBranch>());
+            List<BitbucketServerBranch> branches = new ArrayList<>();
             String response = getRequest(url);
             BitbucketServerBranches page = JsonParser.toJava(response, BitbucketServerBranches.class);
             branches.addAll(page.getValues());
@@ -453,8 +454,9 @@ public class BitbucketServerAPIClient implements BitbucketApi {
                 branches.addAll(page.getValues());
             }
             if (System.getProperty("jenkins.bitbucket.unlimitedBranches") != "true") {
-                List<BitbucketServerBranch> releaseBranches = Collections.synchronizedList(new ArrayList<BitbucketServerBranch>());
-                for (BitbucketServerBranch branch: branches) {
+                List<BitbucketServerBranch> releaseBranches = new ArrayList<>();
+                for (Iterator<BitbucketServerBranch> it = branches.iterator(); it.hasNext(); ) {
+                	BitbucketServerBranch branch = it.next();
                     if (branch.getName().startsWith("release")) {
                         releaseBranches.add(branch);
                         branches.remove(branch);
