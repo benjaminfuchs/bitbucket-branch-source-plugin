@@ -24,18 +24,25 @@
 
 package com.cloudbees.jenkins.plugins.bitbucket.filesystem;
 
+import com.cloudbees.jenkins.plugins.bitbucket.PullRequestSCMHead;
 import com.cloudbees.jenkins.plugins.bitbucket.api.BitbucketApi;
 import edu.umd.cs.findbugs.annotations.NonNull;
 import java.io.IOException;
 import java.io.InputStream;
-import jenkins.scm.api.SCMFile;
 
+import javax.annotation.CheckForNull;
+
+import jenkins.scm.api.SCMFile;
+import jenkins.scm.api.SCMHead;
+import jenkins.scm.api.SCMRevision;
+import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
 
 public class BitbucketSCMFile  extends SCMFile {
 
 	private final BitbucketApi api;
 	private  String ref;
 	private final String hash;
+	private BitbucketSCMFileSystem fileSystem;
 	
 	public String getRef() {
 		return ref;
@@ -60,6 +67,7 @@ public class BitbucketSCMFile  extends SCMFile {
 		this.api = api;
 		this.ref = ref;
 		this.hash = hash;
+		this.fileSystem = bitBucketSCMFileSystem;
 	}
 
 	@Deprecated
@@ -78,6 +86,25 @@ public class BitbucketSCMFile  extends SCMFile {
 	public String getHash() {
 		return hash;
 	}
+
+    @CheckForNull
+    public ChangeRequestCheckoutStrategy getCheckoutStrategy() throws IOException, InterruptedException {
+        if (this.isDirectory()) {
+            SCMRevision revision = fileSystem.getRevision();
+            if (revision != null) {
+                SCMHead head = revision.getHead();
+                if (head instanceof PullRequestSCMHead) {
+                    return ((PullRequestSCMHead) head).getCheckoutStrategy();
+                }
+            }
+        } else {
+            SCMFile parent = this.parent();
+            if (parent instanceof BitbucketSCMFile) {
+                return ((BitbucketSCMFile) parent).getCheckoutStrategy();
+            }
+        }
+        return null;
+    }
 
 	@Override
 	@NonNull

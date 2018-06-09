@@ -72,6 +72,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import jenkins.model.Jenkins;
 import jenkins.scm.api.SCMFile;
+import jenkins.scm.api.mixin.ChangeRequestCheckoutStrategy;
 import net.sf.json.JSONObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
@@ -856,9 +857,9 @@ public class BitbucketServerAPIClient implements BitbucketApi {
         List<String> lines = new ArrayList<>();
         int start=0;
         String ref;
-        if(file.getRef().matches("PR-\\d+")) {  // because JENKINS-48737
-            String prId = file.getRef().replace("PR-", "");
-            ref = "refs/pull-requests/" + prId + "/from";
+        
+        if (file.getRef().matches("PR-\\d+")) { // because JENKINS-48737
+            ref = getRefForPullRequest(file);
         } else {
             ref = file.getRef();
         }
@@ -884,6 +885,35 @@ public class BitbucketServerAPIClient implements BitbucketApi {
             content = collectLines(response, lines);
         }
         return IOUtils.toInputStream(StringUtils.join(lines,'\n'), "UTF-8");
+    }
+
+    /**
+     * Get the correct reference of a pull request with respect to the checkout
+     * strategy.
+     * 
+     * This is related to JENKINS-48737. The content of file.getRef() is either the
+     * branch name or in case of a pull request it is something like "PR-123". Since
+     * there is no reference named like this in bitbucket it has to be changed to
+     * the correct name. Also the configured checkout strategy for the job has to be
+     * taken into account.
+     *
+     * @return the pull request reference
+     */
+    protected String getRefForPullRequest(BitbucketSCMFile file) throws IOException, InterruptedException {
+        ChangeRequestCheckoutStrategy strategy = file.getCheckoutStrategy();
+        String prId = file.getRef().replace("PR-", "");
+        String source = "";
+        if (strategy != null) {
+            if (strategy == ChangeRequestCheckoutStrategy.MERGE) {
+                source = "merge";
+            } else {
+                source = "from";
+            }
+        } else {
+            throw new UnsupportedOperationException(
+                    "Can not get reference for this pull request since checkout strategy can not be determined");
+        }
+        return "refs/pull-requests/" + prId + "/" + source;
     }
 
     private Map<String,Object> collectLines(String response, final List<String> lines) throws IOException {
