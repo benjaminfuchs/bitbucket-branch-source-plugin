@@ -914,7 +914,7 @@ public class BitbucketServerAPIClient implements BitbucketApi {
             LOGGER.warning("Can not get file content. Trying to get from merge target.");
 
             String ref = "";
-            if(file.getRef().matches("refs/pull-requests/d+/merge")) {
+            if(file.getRef().matches("refs/pull-requests/\\d+/merge")) {
                 ref = file.getRef().replace("merge", "to");
             } else {
                 throw x;
