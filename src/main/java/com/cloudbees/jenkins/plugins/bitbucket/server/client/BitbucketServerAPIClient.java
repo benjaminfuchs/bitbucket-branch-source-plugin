@@ -910,14 +910,14 @@ public class BitbucketServerAPIClient implements BitbucketApi {
                 response = getRequest(url);
                 content = collectLines(response, lines);
             }
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException x) {
             LOGGER.warning("Can not get file content. Trying to get from merge target.");
 
             String ref = "";
             if(file.getRef().matches("refs/pull-requests/d+/merge")) {
                 ref = file.getRef().replace("merge", "to");
             } else {
-                throw e;
+                throw x;
             }
 
             UriTemplate template = UriTemplate
