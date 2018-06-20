@@ -888,33 +888,58 @@ public class BitbucketServerAPIClient implements BitbucketApi {
     public InputStream getFileContent(BitbucketSCMFile file) throws IOException, InterruptedException {
         List<String> lines = new ArrayList<>();
         int start=0;
-        String ref;
-        if(file.getRef().matches("PR-\\d+")) {  // because JENKINS-48737
-            String prId = file.getRef().replace("PR-", "");
-            ref = "refs/pull-requests/" + prId + "/from";
-        } else {
-            ref = file.getRef();
-        }
 
-        UriTemplate template = UriTemplate
-                .fromTemplate(API_BROWSE_PATH + "{&start,limit}")
-                .set("owner", getUserCentricOwner())
-                .set("repo", repositoryName)
-                .set("path", file.getPath().split(Operator.PATH.getSeparator()))
-                .set("at", ref)
-                .set("start", start)
-                .set("limit", 500);
-        String url = template.expand();
-        String response = getRequest(url);
-        Map<String,Object> content = collectLines(response, lines);
-
-        while(!(boolean)content.get("isLastPage")){
-            start += (int) content.get("size");
-            url = template
+        try {
+            UriTemplate template = UriTemplate
+                    .fromTemplate(API_BROWSE_PATH + "{&start,limit}")
+                    .set("owner", getUserCentricOwner())
+                    .set("repo", repositoryName)
+                    .set("path", file.getPath().split(Operator.PATH.getSeparator()))
+                    .set("at", file.getRef())
                     .set("start", start)
-                    .expand();
-            response = getRequest(url);
-            content = collectLines(response, lines);
+                    .set("limit", 500);
+            String url = template.expand();
+            String response = getRequest(url);
+            Map<String,Object> content = collectLines(response, lines);
+
+            while(!(boolean)content.get("isLastPage")){
+                start += (int) content.get("size");
+                url = template
+                        .set("start", start)
+                        .expand();
+                response = getRequest(url);
+                content = collectLines(response, lines);
+            }
+        } catch (IOException e) {
+            LOGGER.warning("Can not get file content. Trying to get from merge target.");
+
+            String ref = "";
+            if(file.getRef().matches("refs/pull-requests/d+/merge")) {
+                ref = file.getRef().replace("merge", "to");
+            } else {
+                throw e;
+            }
+
+            UriTemplate template = UriTemplate
+                    .fromTemplate(API_BROWSE_PATH + "{&start,limit}")
+                    .set("owner", getUserCentricOwner())
+                    .set("repo", repositoryName)
+                    .set("path", file.getPath().split(Operator.PATH.getSeparator()))
+                    .set("at", ref)
+                    .set("start", start)
+                    .set("limit", 500);
+            String url = template.expand();
+            String response = getRequest(url);
+            Map<String,Object> content = collectLines(response, lines);
+
+            while(!(boolean)content.get("isLastPage")){
+                start += (int) content.get("size");
+                url = template
+                        .set("start", start)
+                        .expand();
+                response = getRequest(url);
+                content = collectLines(response, lines);
+            }
         }
         return IOUtils.toInputStream(StringUtils.join(lines,'\n'), "UTF-8");
     }

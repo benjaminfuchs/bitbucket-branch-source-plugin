@@ -88,9 +88,6 @@ public class BitbucketBuildStatusNotifications {
             return;
         }
 
-        if (System.getProperty("jenkins.bitbucket.statusUrl") != null) {
-            url = url.replaceFirst("https?:\\/\\/.*\\/jenkins\\/", System.getProperty("jenkins.bitbucket.statusUrl"));
-        }
         String key = build.getParent().getFullName(); // use the job full name as the key for the status
         String name = build.getFullDisplayName(); // use the build number as the display name of the status
         BitbucketBuildStatus status;
