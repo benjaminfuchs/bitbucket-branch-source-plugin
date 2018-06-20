@@ -911,14 +911,13 @@ public class BitbucketServerAPIClient implements BitbucketApi {
                 content = collectLines(response, lines);
             }
         } catch (IOException | InterruptedException x) {
-            LOGGER.warning("Can not get file content. Trying to get from merge target.");
-
             String ref = "";
-            if(file.getRef().matches("refs/pull-requests/\\d+/merge")) {
+            if(file.getRef().contains("pull-requests")) {
                 ref = file.getRef().replace("merge", "to");
             } else {
                 throw x;
             }
+            LOGGER.warning("Can not get file content. Trying to get from merge target.");
 
             UriTemplate template = UriTemplate
                     .fromTemplate(API_BROWSE_PATH + "{&start,limit}")
