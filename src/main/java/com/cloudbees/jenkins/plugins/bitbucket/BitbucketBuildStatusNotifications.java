@@ -120,6 +120,7 @@ public class BitbucketBuildStatusNotifications {
             if (sourceCache.containsKey(buildName)) {
                 s = sourceCache.get(buildName);
             } else {
+                listener.getLogger().println("[Bitbucket] SCM source not supported.");
                 return;
             }
         } else {
@@ -130,11 +131,13 @@ public class BitbucketBuildStatusNotifications {
         if (new BitbucketSCMSourceContext(null, SCMHeadObserver.none())
                 .withTraits(source.getTraits())
                 .notificationsDisabled()) {
+            listener.getLogger().println("[Bitbucket] Notifications disabled.");
             return;
         }
         SCMRevision r = SCMRevisionAction.getRevision(build);  // TODO JENKINS-44648 getRevision(s, build)
         String hash = getHash(r);
         if (hash == null) {
+            listener.getLogger().println("[Bitbucket] Can not notify. Hash is 'null'.");
             return;
         }
         if (r instanceof PullRequestSCMRevision) {
